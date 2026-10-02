@@ -5,7 +5,8 @@ const AdminUsers = ({ users, onRefresh, onNotification }) => {
   const [deletingId, setDeletingId] = useState(null);
 
   const handleDelete = async (user) => {
-    if (user.role === 'admin' || user.email === 'admin123@gmail.com') {
+    // Protect any account whose role is admin (no hardcoded email)
+    if (user.role === 'admin') {
       alert('The admin account cannot be deleted.');
       return;
     }
@@ -28,10 +29,21 @@ const AdminUsers = ({ users, onRefresh, onNotification }) => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px',
+        }}
+      >
         <div>
-          <h3 style={{ fontSize: '18px', fontWeight: '600' }}>Registered Users ({users.length})</h3>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Manage user accounts and access permissions</p>
+          <h3 style={{ fontSize: '18px', fontWeight: '600' }}>
+            Registered Users ({users.length})
+          </h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+            Manage user accounts and access permissions
+          </p>
         </div>
         <button className="btn btn-outline btn-sm" onClick={onRefresh}>
           🔄 Refresh
@@ -52,14 +64,17 @@ const AdminUsers = ({ users, onRefresh, onNotification }) => {
           </thead>
           <tbody>
             {users.map((u) => {
-              const isAdminAccount = u.role === 'admin' || u.email === 'admin123@gmail.com';
+              const isAdminAccount = u.role === 'admin';
               return (
                 <tr key={u._id}>
                   <td style={{ fontWeight: '600' }}>{u.name}</td>
                   <td>{u.email}</td>
                   <td>{u.phone}</td>
                   <td>
-                    <span className={`badge ${isAdminAccount ? 'badge-confirmed' : 'badge-type'}`} style={{ textTransform: 'capitalize' }}>
+                    <span
+                      className={`badge ${isAdminAccount ? 'badge-confirmed' : 'badge-type'}`}
+                      style={{ textTransform: 'capitalize' }}
+                    >
                       {u.role}
                     </span>
                   </td>
@@ -68,7 +83,13 @@ const AdminUsers = ({ users, onRefresh, onNotification }) => {
                   </td>
                   <td>
                     {isAdminAccount ? (
-                      <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                      <span
+                        style={{
+                          fontSize: '12px',
+                          color: 'var(--text-muted)',
+                          fontStyle: 'italic',
+                        }}
+                      >
                         Protected Admin
                       </span>
                     ) : (

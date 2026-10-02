@@ -1,9 +1,9 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Helper to generate JWT Token
+// ── Helper ────────────────────────────────────────────────────────────────────
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'your_secret_key', {
+  return jwt.sign({ id }, process.env.JWT_SECRET || 'change_this_secret_in_env', {
     expiresIn: '30d',
   });
 };
@@ -15,7 +15,7 @@ const register = async (req, res) => {
   try {
     const { name, email, phone, password, confirmPassword } = req.body;
 
-    // Validation
+    // ── 400 Validation ────────────────────────────────────────────────────────
     if (!name || !email || !phone || !password || !confirmPassword) {
       return res.status(400).json({ message: 'Please provide all required fields' });
     }
@@ -29,32 +29,32 @@ const register = async (req, res) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const adminEmail = (process.env.ADMIN_EMAIL || 'admin123@gmail.com').toLowerCase();
 
-    // Block registration with the admin email
-    if (cleanEmail === adminEmail) {
+    // Block registration with the configured admin email
+    const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+    if (adminEmail && cleanEmail === adminEmail) {
       return res.status(400).json({
         message: 'Registration is not allowed for this email address',
       });
     }
 
-    // Check if user already exists
+    // ── 409 Conflict ─────────────────────────────────────────────────────────
     const userExists = await User.findOne({ email: cleanEmail });
     if (userExists) {
-      return res.status(400).json({ message: 'A user with this email already exists' });
+      return res.status(409).json({ message: 'An account with this email already exists' });
     }
 
-    // Force role to 'user' strictly, ignoring any 'role' sent in the request body
+    // ── Create — role is always forced to "user" regardless of request body ───
     const user = await User.create({
       name: name.trim(),
       email: cleanEmail,
       phone: phone.trim(),
-      password,
-      role: 'user',
+      password,        // hashed by the pre-save hook in User model
+      role: 'user',    // never trust the client-supplied role
     });
 
     if (user) {
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: 'Registration successful! Please log in.',
         user: {
@@ -65,12 +65,16 @@ const register = async (req, res) => {
           role: user.role,
         },
       });
-    } else {
-      res.status(400).json({ message: 'Invalid user data provided' });
     }
+
+    return res.status(400).json({ message: 'Invalid user data provided' });
   } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ message: error.message || 'Server error during registration' });
+    console.error('[Auth] Register error:', error);
+    // Mongoose duplicate-key error (race condition)
+    if (error.code === 11000) {
+      return res.status(409).json({ message: 'An account with this email already exists' });
+    }
+    return res.status(500).json({ message: error.message || 'Server error during registration' });
   }
 };
 
@@ -81,14 +85,15 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // ── 400 Validation ────────────────────────────────────────────────────────
     if (!email || !password) {
-      return res.status(400).json({ message: 'Invalid email or password' });
+      return res.status(400).json({ message: 'Please provide email and password' });
     }
 
     const cleanEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: cleanEmail });
 
-    // Check user and password match
+    // ── 401 Invalid credentials ───────────────────────────────────────────────
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
@@ -100,7 +105,7 @@ const login = async (req, res) => {
 
     const token = generateToken(user._id);
 
-    res.json({
+    return res.json({
       success: true,
       token,
       user: {
@@ -112,8 +117,8 @@ const login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error during login' });
+    console.error('[Auth] Login error:', error);
+    return res.status(500).json({ message: 'Server error during login' });
   }
 };
 
@@ -126,7 +131,7 @@ const getMe = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.json({
+    return res.json({
       success: true,
       user: {
         _id: user._id,
@@ -137,8 +142,8 @@ const getMe = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('getMe error:', error);
-    res.status(500).json({ message: 'Server error fetching user profile' });
+    console.error('[Auth] getMe error:', error);
+    return res.status(500).json({ message: 'Server error fetching user profile' });
   }
 };
 

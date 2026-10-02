@@ -16,6 +16,7 @@ const RegisterPage = () => {
 
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
+  const [wakeupMsg, setWakeupMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   const validate = () => {
@@ -29,8 +30,6 @@ const RegisterPage = () => {
       newErrors.email = 'Email address is required';
     } else if (!/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
       newErrors.email = 'Please provide a valid email address';
-    } else if (formData.email.trim().toLowerCase() === 'admin123@gmail.com') {
-      newErrors.email = 'Registration with this email is not permitted';
     }
 
     if (!formData.phone.trim()) {
@@ -56,7 +55,6 @@ const RegisterPage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear inline error on typing
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
@@ -67,14 +65,14 @@ const RegisterPage = () => {
     e.preventDefault();
     if (!validate()) return;
 
-    // Strict front-end block for admin email
-    if (formData.email.trim().toLowerCase() === 'admin123@gmail.com') {
-      setServerError('Registration with this email is not permitted');
-      return;
-    }
-
     setLoading(true);
     setServerError('');
+    setWakeupMsg('');
+
+    // Warn user early that free backend may be cold-starting
+    const wakeupTimer = setTimeout(() => {
+      setWakeupMsg('⏳ Server is waking up, please wait…');
+    }, 5000);
 
     const res = await register({
       name: formData.name.trim(),
@@ -84,41 +82,47 @@ const RegisterPage = () => {
       confirmPassword: formData.confirmPassword,
     });
 
+    clearTimeout(wakeupTimer);
+    setWakeupMsg('');
     setLoading(false);
 
     if (res.success) {
-      // Redirect to login page on success
       navigate('/login', {
         state: { message: 'Registration successful! Please log in to continue.' },
       });
     } else {
+      // Show the real server error message
       setServerError(res.message);
     }
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 'var(--space-xl) var(--space-md)',
-      backgroundColor: 'var(--bg-secondary)',
-    }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 'var(--space-xl) var(--space-md)',
+        backgroundColor: 'var(--bg-secondary)',
+      }}
+    >
       <div className="card" style={{ width: '100%', maxWidth: '480px', padding: 'var(--space-2xl)' }}>
         {/* Brand Header */}
         <div style={{ textAlign: 'center', marginBottom: 'var(--space-xl)' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '54px',
-            height: '54px',
-            borderRadius: '12px',
-            backgroundColor: 'var(--primary-green-light)',
-            fontSize: '28px',
-            marginBottom: '12px',
-          }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '54px',
+              height: '54px',
+              borderRadius: '12px',
+              backgroundColor: 'var(--primary-green-light)',
+              fontSize: '28px',
+              marginBottom: '12px',
+            }}
+          >
             🚗
           </div>
           <h2 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>
@@ -129,16 +133,34 @@ const RegisterPage = () => {
           </p>
         </div>
 
+        {wakeupMsg && !serverError && (
+          <div
+            style={{
+              backgroundColor: '#FEF3C7',
+              color: '#92400E',
+              padding: '12px 14px',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '13px',
+              marginBottom: '20px',
+              fontWeight: '500',
+            }}
+          >
+            {wakeupMsg}
+          </div>
+        )}
+
         {serverError && (
-          <div style={{
-            backgroundColor: '#FEE2E2',
-            color: 'var(--danger-color)',
-            padding: '12px 14px',
-            borderRadius: 'var(--radius-md)',
-            fontSize: '13px',
-            marginBottom: '20px',
-            fontWeight: '500',
-          }}>
+          <div
+            style={{
+              backgroundColor: '#FEE2E2',
+              color: 'var(--danger-color)',
+              padding: '12px 14px',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '13px',
+              marginBottom: '20px',
+              fontWeight: '500',
+            }}
+          >
             ⚠️ {serverError}
           </div>
         )}
@@ -148,6 +170,7 @@ const RegisterPage = () => {
           <div className="form-group">
             <label className="form-label">Full Name</label>
             <input
+              id="register-name"
               type="text"
               name="name"
               placeholder="e.g. John Doe"
@@ -162,6 +185,7 @@ const RegisterPage = () => {
           <div className="form-group">
             <label className="form-label">Email Address</label>
             <input
+              id="register-email"
               type="email"
               name="email"
               placeholder="name@example.com"
@@ -176,6 +200,7 @@ const RegisterPage = () => {
           <div className="form-group">
             <label className="form-label">Phone Number</label>
             <input
+              id="register-phone"
               type="tel"
               name="phone"
               placeholder="e.g. +1 234 567 8900"
@@ -190,6 +215,7 @@ const RegisterPage = () => {
           <div className="form-group">
             <label className="form-label">Password</label>
             <input
+              id="register-password"
               type="password"
               name="password"
               placeholder="Minimum 6 characters"
@@ -204,6 +230,7 @@ const RegisterPage = () => {
           <div className="form-group">
             <label className="form-label">Confirm Password</label>
             <input
+              id="register-confirm-password"
               type="password"
               name="confirmPassword"
               placeholder="Repeat password"
@@ -211,10 +238,13 @@ const RegisterPage = () => {
               value={formData.confirmPassword}
               onChange={handleChange}
             />
-            {errors.confirmPassword && <span className="form-error">{errors.confirmPassword}</span>}
+            {errors.confirmPassword && (
+              <span className="form-error">{errors.confirmPassword}</span>
+            )}
           </div>
 
           <button
+            id="register-submit"
             type="submit"
             className="btn btn-primary"
             style={{ width: '100%', marginTop: '12px', padding: '12px' }}
@@ -223,7 +253,7 @@ const RegisterPage = () => {
             {loading ? (
               <>
                 <span className="spinner spinner-light" style={{ width: '18px', height: '18px' }}></span>
-                Registering...
+                Registering…
               </>
             ) : (
               'Create Account'
@@ -231,7 +261,14 @@ const RegisterPage = () => {
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', marginTop: 'var(--space-xl)', fontSize: '13px', color: 'var(--text-muted)' }}>
+        <div
+          style={{
+            textAlign: 'center',
+            marginTop: 'var(--space-xl)',
+            fontSize: '13px',
+            color: 'var(--text-muted)',
+          }}
+        >
           Already have an account?{' '}
           <Link to="/login" style={{ fontWeight: '600', color: 'var(--primary-green)' }}>
             Log In

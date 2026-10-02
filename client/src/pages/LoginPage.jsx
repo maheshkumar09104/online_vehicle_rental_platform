@@ -10,6 +10,7 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [wakeupMsg, setWakeupMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Success message passed from registration page
@@ -18,52 +19,64 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password) {
-      setErrorMessage('Invalid email or password');
+      setErrorMessage('Please enter your email and password.');
       return;
     }
 
     setLoading(true);
     setErrorMessage('');
+    setWakeupMsg('');
+
+    // Warn user early that free backend may be cold-starting
+    const wakeupTimer = setTimeout(() => {
+      setWakeupMsg('⏳ Server is waking up, please wait…');
+    }, 5000);
 
     const res = await login(email.trim(), password);
+    clearTimeout(wakeupTimer);
+    setWakeupMsg('');
     setLoading(false);
 
     if (res.success && res.user) {
-      // Role-based redirect: user -> /dashboard, admin -> /admin
+      // Role-based redirect
       if (res.user.role === 'admin') {
         navigate('/admin', { replace: true });
       } else {
         navigate('/dashboard', { replace: true });
       }
     } else {
-      // Show generic error message on failure
-      setErrorMessage('Invalid email or password');
+      // Show the real server error message
+      setErrorMessage(res.message || 'Invalid email or password');
     }
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 'var(--space-xl) var(--space-md)',
-      backgroundColor: 'var(--bg-secondary)',
-    }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 'var(--space-xl) var(--space-md)',
+        backgroundColor: 'var(--bg-secondary)',
+      }}
+    >
       <div className="card" style={{ width: '100%', maxWidth: '440px', padding: 'var(--space-2xl)' }}>
         {/* Brand Header */}
         <div style={{ textAlign: 'center', marginBottom: 'var(--space-xl)' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '54px',
-            height: '54px',
-            borderRadius: '12px',
-            backgroundColor: 'var(--primary-green-light)',
-            fontSize: '28px',
-            marginBottom: '12px',
-          }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '54px',
+              height: '54px',
+              borderRadius: '12px',
+              backgroundColor: 'var(--primary-green-light)',
+              fontSize: '28px',
+              marginBottom: '12px',
+            }}
+          >
             🚗
           </div>
           <h2 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>
@@ -75,29 +88,49 @@ const LoginPage = () => {
         </div>
 
         {successNotice && !errorMessage && (
-          <div style={{
-            backgroundColor: 'var(--primary-green-light)',
-            color: 'var(--primary-green-dark)',
-            padding: '12px 14px',
-            borderRadius: 'var(--radius-md)',
-            fontSize: '13px',
-            marginBottom: '20px',
-            fontWeight: '500',
-          }}>
+          <div
+            style={{
+              backgroundColor: 'var(--primary-green-light)',
+              color: 'var(--primary-green-dark)',
+              padding: '12px 14px',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '13px',
+              marginBottom: '20px',
+              fontWeight: '500',
+            }}
+          >
             ✅ {successNotice}
           </div>
         )}
 
+        {wakeupMsg && !errorMessage && (
+          <div
+            style={{
+              backgroundColor: '#FEF3C7',
+              color: '#92400E',
+              padding: '12px 14px',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '13px',
+              marginBottom: '20px',
+              fontWeight: '500',
+            }}
+          >
+            {wakeupMsg}
+          </div>
+        )}
+
         {errorMessage && (
-          <div style={{
-            backgroundColor: '#FEE2E2',
-            color: 'var(--danger-color)',
-            padding: '12px 14px',
-            borderRadius: 'var(--radius-md)',
-            fontSize: '13px',
-            marginBottom: '20px',
-            fontWeight: '500',
-          }}>
+          <div
+            style={{
+              backgroundColor: '#FEE2E2',
+              color: 'var(--danger-color)',
+              padding: '12px 14px',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '13px',
+              marginBottom: '20px',
+              fontWeight: '500',
+            }}
+          >
             ⚠️ {errorMessage}
           </div>
         )}
@@ -106,6 +139,7 @@ const LoginPage = () => {
           <div className="form-group">
             <label className="form-label">Email Address</label>
             <input
+              id="login-email"
               type="email"
               className="form-input"
               placeholder="e.g. name@example.com"
@@ -121,6 +155,7 @@ const LoginPage = () => {
           <div className="form-group">
             <label className="form-label">Password</label>
             <input
+              id="login-password"
               type="password"
               className="form-input"
               placeholder="Enter your password"
@@ -134,6 +169,7 @@ const LoginPage = () => {
           </div>
 
           <button
+            id="login-submit"
             type="submit"
             className="btn btn-primary"
             style={{ width: '100%', marginTop: '12px', padding: '12px' }}
@@ -142,7 +178,7 @@ const LoginPage = () => {
             {loading ? (
               <>
                 <span className="spinner spinner-light" style={{ width: '18px', height: '18px' }}></span>
-                Logging in...
+                Logging in…
               </>
             ) : (
               'Log In'
@@ -150,24 +186,14 @@ const LoginPage = () => {
           </button>
         </form>
 
-        {/* Demo Credentials Box */}
-        <div style={{
-          marginTop: 'var(--space-lg)',
-          padding: '12px',
-          backgroundColor: 'var(--bg-secondary)',
-          borderRadius: 'var(--radius-md)',
-          fontSize: '12px',
-          color: 'var(--text-secondary)',
-          border: '1px dashed var(--border-light)',
-        }}>
-          <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>
-            🔑 Admin Credentials:
-          </div>
-          <div>Email: <code>admin123@gmail.com</code></div>
-          <div>Password: <code>admin123</code></div>
-        </div>
-
-        <div style={{ textAlign: 'center', marginTop: 'var(--space-xl)', fontSize: '13px', color: 'var(--text-muted)' }}>
+        <div
+          style={{
+            textAlign: 'center',
+            marginTop: 'var(--space-xl)',
+            fontSize: '13px',
+            color: 'var(--text-muted)',
+          }}
+        >
           Don't have an account?{' '}
           <Link to="/register" style={{ fontWeight: '600', color: 'var(--primary-green)' }}>
             Register as User

@@ -49,18 +49,27 @@ export const AuthProvider = ({ children }) => {
       }
       return { success: false, message: 'Login failed' };
     } catch (err) {
-      const message = err.response?.data?.message || 'Invalid email or password';
+      // Show the real backend message so the user knows exactly what went wrong
+      const message =
+        err.response?.data?.message ||
+        (err.code === 'ECONNABORTED' || err.message?.includes('timeout')
+          ? 'The server is taking too long to respond. It may be waking up — please try again in 30–60 seconds.'
+          : 'Unable to reach the server. Please check your connection.');
       return { success: false, message };
     }
   };
 
-  // Register handler (User role only)
+  // Register handler (User role only – role is always forced to "user" on the server)
   const register = async (userData) => {
     try {
       const res = await api.post('/auth/register', userData);
       return { success: true, message: res.data.message || 'Registration successful!' };
     } catch (err) {
-      const message = err.response?.data?.message || 'Registration failed. Please check your details.';
+      const message =
+        err.response?.data?.message ||
+        (err.code === 'ECONNABORTED' || err.message?.includes('timeout')
+          ? 'The server is taking too long to respond. It may be waking up — please try again in 30–60 seconds.'
+          : 'Unable to reach the server. Please check your connection.');
       return { success: false, message };
     }
   };
