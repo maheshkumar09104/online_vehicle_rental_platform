@@ -13,24 +13,24 @@ connectDB();
 const app = express();
 
 // ── CORS ────────────────────────────────────────────────────────────────────
+const normalize = (url) => (url ? url.trim().replace(/\/+$/, '') : '');
+
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
-];
-
-// Add the production frontend URL from env if set
-if (process.env.CLIENT_URL) {
-  allowedOrigins.push(process.env.CLIENT_URL);
-}
+  'https://vehicle-rental-app-l4hj.onrender.com',
+  normalize(process.env.CLIENT_URL),
+].filter(Boolean);
 
 const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (curl, Postman, server-to-server)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(normalize(origin))) {
       return callback(null, true);
     }
-    callback(new Error(`CORS: origin ${origin} not allowed`));
+    console.warn(`[CORS] Blocked origin: ${origin}`);
+    return callback(null, false);
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -38,8 +38,7 @@ const corsOptions = {
   optionsSuccessStatus: 204,
 };
 
-// Handle preflight for every route
-app.options('*', cors(corsOptions));
+// cors() also answers preflight (OPTIONS) requests automatically
 app.use(cors(corsOptions));
 
 // ── Body parsers ─────────────────────────────────────────────────────────────
